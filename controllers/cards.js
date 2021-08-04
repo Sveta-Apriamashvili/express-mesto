@@ -1,31 +1,12 @@
 const Card = require('../model/card');
+const ErrorHandler = require('../utils/error_handler');
 
-const BAD_REQUEST_ERROR_NAME = 'ValidationError';
-const BAD_REQUEST_ERROR_CODE = 400;
-const NOT_FOUND_ERROR_CODE = 404;
-const SERVER_ERROR_CODE = 500;
-
-/* eslint-disable no-underscore-dangle */
-function _sendNotFound(res) {
-  res.status(NOT_FOUND_ERROR_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
-}
-
-function _handleDefaultError(res) {
-  return res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
-}
-
-function _handleError(error, res) {
-  if (error.name === BAD_REQUEST_ERROR_NAME) {
-    return res.status(BAD_REQUEST_ERROR_CODE).send({ message: 'Неправильно составлен запрос' });
-  }
-
-  return _handleDefaultError(res);
-}
+const NOT_FOUND_MSG = 'Запрашиваемая карточка не найдена';
 
 const getCards = (req, res) => {
   Card.find({})
     .then((cards) => res.send(cards))
-    .catch(() => _handleDefaultError(res));
+    .catch((err) => ErrorHandler.handleError(err, res));
 };
 
 const createCard = (req, res) => {
@@ -34,17 +15,17 @@ const createCard = (req, res) => {
 
   return Card.create({ name, link, owner })
     .then((card) => res.send(card))
-    .catch((err) => _handleError(err, res));
+    .catch((err) => ErrorHandler.handleError(err, res));
 };
 
 const deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
     .then((card) => {
-      if (!card) return _sendNotFound(res);
+      if (!card) return ErrorHandler.sendNotFound(res, NOT_FOUND_MSG);
 
       return res.send(card);
     })
-    .catch(() => _handleDefaultError(res));
+    .catch((err) => ErrorHandler.handleError(err, res));
 };
 
 // eslint-disable-next-line no-unused-vars
@@ -54,11 +35,11 @@ const addCardLike = (req, res) => Card.findByIdAndUpdate(
   { new: true },
 )
   .then((card) => {
-    if (!card) return _sendNotFound(res);
+    if (!card) return ErrorHandler.sendNotFound(res, NOT_FOUND_MSG);
 
     return res.send(card);
   })
-  .catch(() => _handleDefaultError(res));
+  .catch((err) => ErrorHandler.handleError(err, res));
 
 // eslint-disable-next-line no-unused-vars
 const deleteCardLike = (req, res) => Card.findByIdAndUpdate(
@@ -67,11 +48,11 @@ const deleteCardLike = (req, res) => Card.findByIdAndUpdate(
   { new: true },
 )
   .then((card) => {
-    if (!card) return _sendNotFound(res);
+    if (!card) return ErrorHandler.sendNotFound(res);
 
     return res.send(card);
   })
-  .catch(() => _handleDefaultError(res));
+  .catch((err) => ErrorHandler.handleError(err, res));
 
 module.exports = {
   getCards,
