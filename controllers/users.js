@@ -31,18 +31,25 @@ const updateUser = (req, res) => {
   return User.findByIdAndUpdate(
     req.params.userId,
     { name, about },
-    { new: true },
-    { runValidators: true },
+    { new: true, runValidators: true },
   )
-    .then((user) => res.send(user))
+    .then((user) => {
+      if (!user) return ErrorHandler.sendNotFound(res, 'Запрашиваемый пользователь не найден');
+
+      return res.send(user);
+    })
     .catch((err) => ErrorHandler.handleError(err, res));
 };
 
 const updateAvatar = (req, res) => {
   const avatar = req.body;
 
-  return User.findByIdAndUpdate(req.params.userId, avatar, { new: true }, { runValidators: true })
-    .then((user) => res.send(user))
+  return User.findByIdAndUpdate(req.params.userId, avatar, { new: true, runValidators: true })
+    .then((user) => {
+      if (!user) return ErrorHandler.sendNotFound(res, 'Запрашиваемый пользователь не найден');
+
+      return res.send(user);
+    })
     .catch((err) => ErrorHandler.handleError(err, res));
 };
 
