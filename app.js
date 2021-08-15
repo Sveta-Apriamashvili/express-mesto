@@ -15,6 +15,7 @@ const { PORT = 3000 } = process.env;
 const app = express();
 
 const auth = require('./middlewares/auth');
+const errorsHandler = require('./middlewares/error');
 
 app.use(cookieParser());
 mongoose.connect('mongodb://localhost:27017/mestodb', {
@@ -42,6 +43,8 @@ app.use('/', cardRouter);
 app.use((req, res) => {
   res.status(404).send({ message: 'Запрашиваемый метод не существует' });
 });
+
+app.use(errorsHandler);
 
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);

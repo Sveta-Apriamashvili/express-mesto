@@ -1,25 +1,27 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../model/user');
-const ErrorHandler = require('../utils/error_handler');
+const NotFoundError = require('../utils/not-found-error');
+const ForbiddenError = require('../utils/forbidden-error');
 
-const getUsers = (req, res) => {
+const getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send(users))
-    .catch((err) => ErrorHandler.handleError(err, res));
+    .catch(next);
 };
 
-const getUser = (req, res) => {
-  User.findById(req.params.userId)
+const getUser = (req, res, next) => {
+  const id = req.user._id;
+  User.findById(id)
     .then((user) => {
-      if (!user) return ErrorHandler.sendNotFound(res, 'Запрашиваемый пользователь не найден');
+      if (!user) throw new NotFoundError('Пользователя не существует');
 
       return res.send(user);
     })
-    .catch((err) => ErrorHandler.handleError(err, res));
+    .catch(next);
 };
 
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
@@ -28,10 +30,10 @@ const createUser = (req, res) => {
       name, about, avatar, email, password: hash,
     }))
     .then((user) => res.send(user))
-    .catch((err) => ErrorHandler.handleError(err, res));
+    .catch(next);
 };
 
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const { name, about } = req.body;
 
   return User.findByIdAndUpdate(
@@ -40,49 +42,47 @@ const updateUser = (req, res) => {
     { new: true, runValidators: true },
   )
     .then((user) => {
-      if (!user) return ErrorHandler.sendNotFound(res, 'Запрашиваемый пользователь не найден');
+      if (!user) throw new NotFoundError('Пользователя не существует');
 
       return res.send(user);
     })
-    .catch((err) => ErrorHandler.handleError(err, res));
+    .catch(next);
 };
 
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const avatar = req.body;
 
   return User.findByIdAndUpdate(req.params.userId, avatar, { new: true, runValidators: true })
     .then((user) => {
-      if (!user) return ErrorHandler.sendNotFound(res, 'Запрашиваемый пользователь не найден');
+      if (!user) throw new NotFoundError('Пользователя не существует');
 
       return res.send(user);
     })
-    .catch((err) => ErrorHandler.handleError(err, res));
+    .catch(next);
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
 
   return User.findOne({ email }).select('+password')
     .then((user) => {
-      if (!user) {
-        return ErrorHandler.sendNotFound(res, 'Запрашиваемый пользователь не найден');
-      }
+      if (!user) throw new NotFoundError('Пользователя не существует');
+
       bcrypt.compare(password, user.password, ((error, isValid) => {
-        if (error) {
-          res.status(403).send({ error });
-        }
-        if (!isValid) {
-          res.status(403).send({ error: 'Неправильный логин или пароль' });
-        }
+        if (error) throw new ForbiddenError(error);
+
+        if (!isValid) throw new ForbiddenError('Неправильный пароль');
+
         if (isValid) {
-          const token = jwt.sign({ _id: user._id }, 'secretno04en');
+          const token = jwt.sign({ _id: user._id }, 'secretno04en', { expiresIn: '7d' });
           res.cookie('jwt', token, {
             httpOnly: true,
             sameSite: true,
-          }).status(200).send({ user: user.toJSON() });
+          }).send({ user: user.toJSON() });
         }
       }));
-    });
+    })
+    .catch(next);
 };
 
 module.exports = {
