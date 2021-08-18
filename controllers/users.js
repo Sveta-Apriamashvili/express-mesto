@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../model/user');
 const NotFoundError = require('../utils/not-found-error');
 const ForbiddenError = require('../utils/forbidden-error');
+const UnauthorizedClientError = require('../utils/unauthorized-client-error');
 
 const getUsers = (req, res, next) => {
   User.find({})
@@ -29,7 +30,9 @@ const createUser = (req, res, next) => {
     .then((hash) => User.create({
       name, about, avatar, email, password: hash,
     }))
-    .then((user) => res.send(user))
+    .then((user) => res.send({
+      name: user.name, about: user.about, avatar: user.avatar, email: user.email,
+    }))
     .catch(next);
 };
 
@@ -66,7 +69,7 @@ const login = (req, res, next) => {
 
   return User.findOne({ email }).select('+password')
     .then((user) => {
-      if (!user) throw new NotFoundError('Пользователя не существует');
+      if (!user) throw new UnauthorizedClientError('Пользователя не существует');
 
       bcrypt.compare(password, user.password, ((error, isValid) => {
         if (error) throw new ForbiddenError(error);
@@ -78,7 +81,9 @@ const login = (req, res, next) => {
           res.cookie('jwt', token, {
             httpOnly: true,
             sameSite: true,
-          }).send({ user: user.toJSON() });
+          }).send({
+            name: user.name, about: user.about, avatar: user.avatar, email: user.email,
+          });
         }
       }));
     })

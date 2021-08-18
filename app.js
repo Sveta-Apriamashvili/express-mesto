@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const { celebrate, Joi, errors } = require('celebrate');
+const NotFoundError = require('./utils/not-found-error');
 const userRouter = require('./routes/users');
 const cardRouter = require('./routes/cards');
 const {
@@ -29,27 +30,28 @@ app.use(express.json());
 
 app.post('/signup', celebrate({
   body: Joi.object().keys({
-    email: Joi.string().required(),
+    email: Joi.string().required().email(),
     password: Joi.string().required(),
   }).unknown(true),
 }), createUser);
 app.post('/signin', celebrate({
   body: Joi.object().keys({
-    email: Joi.string().required(),
+    email: Joi.string().required().email(),
     password: Joi.string().required(),
   }).unknown(true),
 }), login);
 app.use(auth);
-app.use(celebrate({
-  headers: Joi.object({
-    Cookie: Joi.string().required().regex(/abc\d{3}/),
-  }).unknown(),
-}));
+// app.use(celebrate({
+//   headers: Joi.object({
+//     Cookie: Joi.string(),
+//   }).unknown(),
+// }));
 app.use('/', userRouter);
 app.use('/', cardRouter);
 
+// eslint-disable-next-line no-unused-vars
 app.use((req, res) => {
-  res.status(404).send({ message: 'Запрашиваемый метод не существует' });
+  throw new NotFoundError('Запрашиваемый метод не существует');
 });
 app.use(errors());
 app.use(errorsHandler);
